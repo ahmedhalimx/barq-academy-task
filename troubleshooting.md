@@ -41,5 +41,5 @@ Keep chronological entries. Copy this block for each meaningful investigation.
 - Root cause: Multiple deliberate configuration defects across `docker-compose.yml`, `config/app.env`, `Dockerfile`, and `nginx/nginx.conf`.
 - Fix: Planned for Phase 2: Correct Dockerfile user/secret leakage, update compose network topologies, fix port mappings, configure PostgreSQL data directory and remove tmpfs, set Redis persistence, fix environment credentials, and correct NGINX upstream definitions.
 - Retest evidence: Pending execution of Phase 2 fixes.
-- Related commit: Baseline inspection commit.
+- Related commit: 21029ec
 - Remaining uncertainty: None on the baseline defects; exact failover and recovery behavior will be verified systematically.

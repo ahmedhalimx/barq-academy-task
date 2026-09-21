@@ -39,7 +39,65 @@ Keep chronological entries. Copy this block for each meaningful investigation.
     `curl: (56) Recv failure: Connection reset by peer`
 - Failed attempt and what changed your thinking: Attempting to query `http://127.0.0.1:8080/` initially appeared to be an application crash, but checking `docker compose ps` showed NGINX was running while forwarding `8080` to port `81` instead of `80`. Furthermore, inspecting `nginx/nginx.conf` revealed upstream `app-01` configured with port `8081` and `proxy_next_upstream off;`, proving that even if NGINX port mapping was fixed, traffic to `app-01` would fail with no fallback.
 - Root cause: Multiple deliberate configuration defects across `docker-compose.yml`, `config/app.env`, `Dockerfile`, and `nginx/nginx.conf`.
-- Fix: Planned for Phase 2: Correct Dockerfile user/secret leakage, update compose network topologies, fix port mappings, configure PostgreSQL data directory and remove tmpfs, set Redis persistence, fix environment credentials, and correct NGINX upstream definitions.
-- Retest evidence: Pending execution of Phase 2 fixes.
+- Fix: Corrected Dockerfile user and secret copying, fixed environment credentials and ports in `config/app.env`, updated NGINX upstream port and enabled retry failover, corrected network topologies, volume mappings, Redis AOF, healthchecks, and resource limits in `docker-compose.yml`.
+- Retest evidence: Documented in Entry 2.
 - Related commit: 21029ec
 - Remaining uncertainty: None on the baseline defects; exact failover and recovery behavior will be verified systematically.
+
+## Entry 2 / 2026-09-21 / 17:38 UTC
+- Symptom: Repairing the environment requires resolving 5 distinct failure categories:
+  1. Image-level vulnerability (`USER root` and hardcoded `app.env` secrets copied into image layer).
+  2. Database and Redis connection failure (wrong ports 5433/6380, invalid PostgreSQL password `...8d`).
+  3. Reverse proxy failure (`app-01:8081` upstream mismatch, `proxy_next_upstream off`).
+  4. Network boundary violation (`nginx` attached to `backend`, `postgres` and `redis` publishing host ports).
+  5. Persistence flaw (`tmpfs` data directory on Postgres, Redis persistence disabled).
+- Hypothesis:
+  1. Running as `USER app` and removing `COPY config/app.env` eliminates secret leakage and privileges.
+  2. Setting `DATABASE_URL` to port 5432 with password `...8c` and `REDIS_URL` to port 6379 restores dependencies.
+  3. Setting upstream `app-01:8080` and `proxy_next_upstream error timeout http_502 http_503 http_504` restores round-robin balance and failover.
+  4. Moving `nginx` to `[frontend]` only and removing host ports on database/redis enforces isolation.
+  5. Mounting `postgres-data` to `/var/lib/postgresql/data` (removing tmpfs) and configuring `redis-server --appendonly yes` guarantees persistence.
+  6. Pointing app healthcheck to `/health` and binding `APP_HOST: 0.0.0.0` resolves health checks.
+- Command or test:
+  ```bash
+  docker compose -p barq-assessment up --build -d
+  docker compose -p barq-assessment ps -a
+  curl -i http://127.0.0.1:8080/
+  curl -i http://127.0.0.1:8080/health
+  curl -i http://127.0.0.1:8080/ready
+  curl -i http://127.0.0.1:8080/instance
+  curl -i http://127.0.0.1:8080/counter
+  curl -i -H 'Content-Type: application/json' -d '{"title":"Persistence test record"}' http://127.0.0.1:8080/records
+  curl -i http://127.0.0.1:8080/records
+  docker exec nginx nc -z -w 2 postgres 5432
+  docker exec nginx nc -z -w 2 redis 6379
+  ```
+- Actual output:
+  - `docker compose ps -a`:
+    All 5 containers (`app-01`, `app-02`, `nginx`, `postgres`, `redis`) report `Up (healthy)`.
+    NGINX is mapped to `127.0.0.1:8080->80/tcp`. No host ports exposed for postgres, redis, or app.
+  - Endpoint tests:
+    - `/` -> 200 OK: `{"instance_id":"app-01","message":"Welcome to BARQ Systems","service":"barq-api","version":"2.0.0"}`
+    - `/health` -> 200 OK: `{"instance_id":"app-02","service":"barq-api","status":"alive","version":"2.0.0"}`
+    - `/ready` -> 200 OK: `{"dependencies":{"postgres":"ready","redis":"ready"},"instance_id":"app-01","service":"barq-api","status":"ready","version":"2.0.0"}`
+    - `/instance` -> 200 OK: `{"instance_id":"app-02","service":"barq-api","status":"ok","version":"2.0.0"}`
+    - `/counter` -> 200 OK: `{"counter":1,"instance_id":"app-01","service":"barq-api","version":"2.0.0"}`
+    - `POST /records` -> 201 Created: `{"instance_id":"app-02","record":{"id":3,"title":"Persistence test record"},"service":"barq-api","version":"2.0.0"}`
+    - `GET /records` -> 200 OK: returns all 3 records (initial 2 + newly created record).
+  - Network isolation:
+    Host connections to 5432, 15432, 6379, 16379 rejected (`ConnectionRefusedError`).
+    Inside `nginx` container, `nc -z -w 2 postgres 5432` and `nc -z -w 2 redis 6379` output: `bad address` (name resolution blocked).
+- Failed attempt and what changed your thinking: In `docker-compose.yml`, `nginx` initially lacked an explicit healthcheck. Reviewing `scripts/video_challenge.py` preflight revealed that it iterates through all services in `SERVICES` (`app-01`, `app-02`, `nginx`, `postgres`, `redis`) and verifies `Health.Status == "healthy"`. Added a busybox `wget` healthcheck in `nginx` service definition to ensure 100% compliance with automated preflight evaluation.
+- Root cause: Cumulative misconfigurations in container build, network placement, ports, credentials, and volume declarations.
+- Fix:
+  1. `Dockerfile`: `USER app`, removed secret copying.
+  2. `config/app.env`: Updated PostgreSQL credentials and Redis port.
+  3. `nginx/nginx.conf`: Corrected upstream port to 8080, added `proxy_next_upstream` retry logic.
+  4. `docker-compose.yml`: Set `APP_HOST: 0.0.0.0`, network boundaries, volume mapping, healthchecks, and resource limits.
+- Retest evidence: All automated checks passed with 200/201 response codes, healthy container status, and verified network isolation.
+- Related commits:
+  - `a390f3d`: `fix(security): run as unprivileged app user and remove secret from image`
+  - `25a6fd4`: `fix(config): correct PostgreSQL credentials and port and Redis port`
+  - `f83cd0c`: `fix(nginx): correct upstream app port to 8080 and enable failover`
+  - `370adcb`: `fix(compose): repair networking, postgres persistence, redis aof, healthchecks, and resource limits`
+- Remaining uncertainty: None. Environment is ready for automated validation, failure tests, and backup/restore scripts.

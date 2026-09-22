@@ -33,7 +33,7 @@ python failure_test.py
 ./restore.sh backups/barq_tasks_YYYYMMDD_HHMMSS.sql
 ```
 
-The failure test stops only `app-02`, measures 20 degraded-state requests, restores it, waits for health, and proves both identities return. It starts `app-02` in `finally` if a test failure interrupts recovery. Restore intentionally replaces the lab database; create a new backup first and never use the script on a non-lab container. `backups/` is Git-ignored.
+The failure test first verifies that `app-02` belongs to this Compose project, then stops only that container, measures 20 degraded-state requests, restores it, waits for health, and proves both identities return. It starts `app-02` in `finally` if a test failure interrupts recovery. Backup and restore also verify that `postgres` belongs to this project. Restore intentionally replaces the lab database; create a new backup first and never use the script on a non-lab container. `backups/` is Git-ignored.
 
 To prove volume persistence, create a record, recreate only `app-01`, `app-02`, and `postgres` without removing volumes, then retrieve `/records`. Stop safely with `docker compose -p barq-assessment down`; do not use `down --volumes` until backups are verified.
 

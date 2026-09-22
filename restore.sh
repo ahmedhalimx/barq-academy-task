@@ -3,6 +3,11 @@ set -euo pipefail
 
 BACKUP_DIR="backups"
 
+if [ "$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' postgres 2>/dev/null || true)" != "barq-assessment" ]; then
+    echo "Error: container 'postgres' is not owned by the barq-assessment Compose project." >&2
+    exit 1
+fi
+
 # Accept backup file path argument or grab the latest SQL file in backups/
 if [ -n "${1:-}" ]; then
     BACKUP_FILE="$1"

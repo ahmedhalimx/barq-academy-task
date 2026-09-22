@@ -111,3 +111,9 @@ Keep chronological entries. Copy this block for each meaningful investigation.
 - Retest evidence: Static checks passed; runtime retest is pending Docker Desktop and dependency installation.
 - Related commit: `e4c549a`.
 - Remaining uncertainty: Actual compose startup, backup/restore, failure recovery, and CI run must be captured before final submission.
+
+## Entry 4 / 2026-09-22 / destructive-operation guard
+- Symptom: The backup, restore, and failure scripts addressed literal container names. A same-named unrelated container must never be stopped or have its data replaced.
+- Fix: Each destructive script verifies Docker's `com.docker.compose.project=barq-assessment` label before acting.
+- Retest evidence: Static Python compilation passed; runtime label verification remains pending the Docker engine.
+- Related commit: pending.

@@ -10,6 +10,7 @@ import urllib.request
 PUBLIC_PORT = os.getenv("PUBLIC_PORT", "8080")
 BASE_URL = f"http://127.0.0.1:{PUBLIC_PORT}"
 TARGET_CONTAINER = "app-02"
+PROJECT_NAME = "barq-assessment"
 
 FAILED_CHECKS = []
 
@@ -60,6 +61,17 @@ def get_container_health(container_name: str) -> str:
         return "unknown"
 
 
+def belongs_to_assessment(container_name: str) -> bool:
+    try:
+        result = subprocess.run(
+            ["docker", "inspect", "--format={{ index .Config.Labels \"com.docker.compose.project\" }}", container_name],
+            capture_output=True, text=True, timeout=10, check=True,
+        )
+        return result.stdout.strip() == PROJECT_NAME
+    except subprocess.SubprocessError:
+        return False
+
+
 def wait_for_container_healthy(container_name: str, timeout_secs: int = 30) -> bool:
     start = time.time()
     while time.time() - start < timeout_secs:
@@ -72,6 +84,10 @@ def wait_for_container_healthy(container_name: str, timeout_secs: int = 30) -> b
 
 def main():
     print("=== Starting Failure Resilience Test (Phase 3B) ===")
+
+    if not log_result("Target Ownership", belongs_to_assessment(TARGET_CONTAINER),
+                      f"{TARGET_CONTAINER} must belong to {PROJECT_NAME}"):
+        return 1
 
     # 1. Verify both backends healthy before starting
     print("\n[Step 1] Verifying preflight status of backends...")

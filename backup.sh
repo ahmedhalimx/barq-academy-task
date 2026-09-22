@@ -5,6 +5,11 @@ BACKUP_DIR="backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/barq_tasks_${TIMESTAMP}.sql"
 
+if [ "$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' postgres 2>/dev/null || true)" != "barq-assessment" ]; then
+    echo "Error: container 'postgres' is not owned by the barq-assessment Compose project." >&2
+    exit 1
+fi
+
 mkdir -p "${BACKUP_DIR}"
 
 echo "Creating PostgreSQL backup from container 'postgres'..."

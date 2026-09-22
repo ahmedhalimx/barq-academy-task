@@ -41,4 +41,4 @@ To prove volume persistence, create a record, recreate only `app-01`, `app-02`, 
 
 `.github/workflows/ci.yml` performs Compose syntax validation, build, start, bounded readiness wait, `validate.py`, and always tears down. Green CI proves those scripted checks on the runner, not production scale, backup recovery, or the recorded challenge.
 
-Static verification on 2026-09-22 passed: `python -m py_compile validate.py failure_test.py` and `git diff --check`. Runtime verification is pending: Docker Desktop was not running (`//./pipe/docker_engine` absent) and the host Python lacked `psycopg`. Start Docker Desktop, install `requirements.txt`, run the commands above, and record actual results in the evidence index.
+Verification on 2026-09-22 passed in WSL2 Docker: all five containers became healthy; `validate.py` passed before and after the scoped failure test; `failure_test.py` preserved 20/20 requests while `app-02` was stopped and again after recovery; `backup.sh` and `restore.sh` restored 15 records; the final validation passed. Static checks also passed: `python -m py_compile validate.py failure_test.py` and `git diff --check`.

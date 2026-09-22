@@ -4,7 +4,7 @@
 |---|---|---|---|
 | Baseline investigation | `troubleshooting.md` entries 1-2 | `21029ec`, `5d79265` | Pending recording |
 | Environment repair | Dockerfile, Compose, environment, NGINX | `a390f3d`, `25a6fd4`, `f83cd0c`, `370adcb` | Pending recording |
-| Validation/recovery/backup | `validate.py`, `failure_test.py`, `backup.sh`, `restore.sh` | `e4c549a`; static checks passed, runtime pending Docker engine | Pending recording |
+| Validation/recovery/backup | `validate.py`, `failure_test.py`, `backup.sh`, `restore.sh` | WSL2 verification passed: 5 healthy containers, 20/20 degraded/recovered traffic, backup restore count=15, final validation passed; runtime-fix commit pending | Pending recording |
 | CI | `.github/workflows/ci.yml` | `e4c549a`; CI URL pending push | Pending push |
 | Historical incident analysis | `log_analysis.md`, original `logs/` | Documentation commit pending | Demonstrate one finding |
 | Architecture | `architecture.pdf` | Documentation commit pending | Pending recording |

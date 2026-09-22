@@ -117,3 +117,10 @@ Keep chronological entries. Copy this block for each meaningful investigation.
 - Fix: Each destructive script verifies Docker's `com.docker.compose.project=barq-assessment` label before acting.
 - Retest evidence: Static Python compilation passed; runtime label verification remains pending the Docker engine.
 - Related commit: pending.
+
+## Entry 5 / 2026-09-22 / WSL2 runtime verification
+- Symptom: WSL2 Docker started all five services and validation passed, but `backup.sh` failed with `unknown shorthand flag: 'T' in -T`.
+- Root cause: `-T` is a `docker compose exec` option, not a `docker exec` option.
+- Fix: Removed `-T`; plain `docker exec` does not allocate a TTY by default and preserves `pg_dump` output redirection.
+- Retest evidence: `backup.sh` created `backups/barq_tasks_20260922_101440.sql`; `restore.sh` completed and verified 15 records; `validate.py` then passed every container, endpoint, load-balancing, readiness, network-isolation, and host-port check.
+- Related commit: pending runtime-fix commit.

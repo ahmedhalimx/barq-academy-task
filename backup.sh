@@ -14,7 +14,7 @@ mkdir -p "${BACKUP_DIR}"
 
 echo "Creating PostgreSQL backup from container 'postgres'..."
 
-if docker exec -T postgres pg_dump -U barq_app -d barq_tasks > "${BACKUP_FILE}"; then
+if docker exec postgres pg_dump -U barq_app -d barq_tasks > "${BACKUP_FILE}"; then
     if [ -s "${BACKUP_FILE}" ]; then
         echo "Backup successfully created: ${BACKUP_FILE}"
         exit 0

@@ -101,3 +101,13 @@ Keep chronological entries. Copy this block for each meaningful investigation.
   - `f83cd0c`: `fix(nginx): correct upstream app port to 8080 and enable failover`
   - `370adcb`: `fix(compose): repair networking, postgres persistence, redis aof, healthchecks, and resource limits`
 - Remaining uncertainty: None. Environment is ready for automated validation, failure tests, and backup/restore scripts.
+
+## Entry 3 / 2026-09-22 / static operational review
+- Symptom: The uncommitted automation was not yet safe enough to serve as runtime evidence: NGINX was configured to retry `non_idempotent` requests, and validation used an HTTP client against PostgreSQL/Redis TCP ports.
+- Hypothesis: Retrying an ambiguous POST can duplicate a database write; `wget` can fail after a successful TCP connection because PostgreSQL/Redis do not speak HTTP, so its exit code cannot prove network isolation.
+- Command or test: `python -m py_compile validate.py failure_test.py`, `git diff --check`, code/diff review, and programmatic parsing of all historical logs.
+- Actual output: Python compilation and whitespace checks passed. Docker runtime checks could not run because `//./pipe/docker_engine` was absent; app tests also could not import `psycopg` before the declared requirements were installed.
+- Fix: Removed non-idempotent retry behavior, limited safe-method attempts to the two upstreams, made validation inspect NGINX runtime network membership, added all-service health checks, randomized validation records, and ensured the failure test restarts `app-02` in `finally`.
+- Retest evidence: Static checks passed; runtime retest is pending Docker Desktop and dependency installation.
+- Related commit: `e4c549a`.
+- Remaining uncertainty: Actual compose startup, backup/restore, failure recovery, and CI run must be captured before final submission.

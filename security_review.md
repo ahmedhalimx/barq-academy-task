@@ -1,6 +1,6 @@
 # Security and production-readiness review
 
-1. **Image secrets:** app environment is no longer copied into the image (`a390f3d`). Verify image history; use a secret manager and rotation in production.
+1. **Image and repository secrets:** app environment is no longer copied into the image (`a390f3d`) or tracked as `config/app.env`; Compose now reads the ignored root `.env`. Startup logs report only whether dependency configuration exists, not URLs. Verify `git ls-files config/app.env` is empty and inspect image history; use a secret manager and rotation in production.
 2. **Root runtime:** the app uses UID/GID 10001 (`a390f3d`). Verify `docker exec app-01 id`; add read-only FS/capability drops where compatible.
 3. **Data-service exposure:** PostgreSQL/Redis have no host ports (`370adcb`). Verify `docker compose ps` and `validate.py`; add firewall/network policies in production.
 4. **Proxy isolation:** NGINX has no backend network attachment; validation inspects Docker runtime state (`e4c549a`). Verify `docker inspect nginx`.

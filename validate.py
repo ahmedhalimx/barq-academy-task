@@ -61,25 +61,29 @@ def wait_for_readiness(timeout_secs: int = 30) -> bool:
     return log_result("Service Readiness Poll (/ready)", False, f"Timed out after {timeout_secs}s")
 
 
-def check_container_health() -> bool:
-    """Require all compose services to be running and health-checked before HTTP tests."""
-    try:
-        result = subprocess.run(
-            ["docker", "inspect", *REQUIRED_CONTAINERS], capture_output=True,
-            text=True, timeout=10, check=True,
-        )
-        containers = json.loads(result.stdout)
-        states = {
-            item["Name"].lstrip("/"): item["State"].get("Health", {}).get(
-                "Status", item["State"].get("Status", "unknown")
+def wait_for_container_health(timeout_secs: int = 30) -> bool:
+    """Wait for every required Compose service rather than sampling startup once."""
+    start = time.time()
+    states = {}
+    while time.time() - start < timeout_secs:
+        try:
+            result = subprocess.run(
+                ["docker", "inspect", *REQUIRED_CONTAINERS], capture_output=True,
+                text=True, timeout=10, check=True,
             )
-            for item in containers
-        }
-    except (subprocess.SubprocessError, json.JSONDecodeError, KeyError) as exc:
-        return log_result("Compose Service Health", False, str(exc))
-
-    passed = all(states.get(name) == "healthy" for name in REQUIRED_CONTAINERS)
-    return log_result("Compose Service Health", passed, str(states))
+            containers = json.loads(result.stdout)
+            states = {
+                item["Name"].lstrip("/"): item["State"].get("Health", {}).get(
+                    "Status", item["State"].get("Status", "unknown")
+                )
+                for item in containers
+            }
+            if all(states.get(name) == "healthy" for name in REQUIRED_CONTAINERS):
+                return log_result("Compose Service Health", True, str(states))
+        except (subprocess.SubprocessError, json.JSONDecodeError, KeyError) as exc:
+            states = {"error": str(exc)}
+        time.sleep(1)
+    return log_result("Compose Service Health", False, f"timed out after {timeout_secs}s; {states}")
 
 
 def check_endpoints() -> bool:
@@ -204,8 +208,8 @@ def check_prohibited_host_ports() -> bool:
 def main():
     print("=== Starting Validation Suite ===")
 
-    # 1. Container state and bounded readiness wait
-    check_container_health()
+    # 1. Bounded container-health and readiness waits
+    wait_for_container_health(timeout_secs=30)
     ready = wait_for_readiness(timeout_secs=30)
 
     if not ready:

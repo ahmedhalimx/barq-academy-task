@@ -8,6 +8,7 @@ Two Flask API instances run behind NGINX, using PostgreSQL and Redis on a privat
 
 ```bash
 cp .env.example .env
+# Set a private local POSTGRES_PASSWORD and matching DATABASE_URL in .env.
 docker compose -p barq-assessment config -q
 docker compose -p barq-assessment up --build -d
 python3 -m venv .venv && . .venv/bin/activate

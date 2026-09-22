@@ -124,3 +124,10 @@ Keep chronological entries. Copy this block for each meaningful investigation.
 - Fix: Removed `-T`; plain `docker exec` does not allocate a TTY by default and preserves `pg_dump` output redirection.
 - Retest evidence: `backup.sh` created `backups/barq_tasks_20260922_101440.sql`; `restore.sh` completed and verified 15 records; `validate.py` then passed every container, endpoint, load-balancing, readiness, network-isolation, and host-port check.
 - Related commit: pending runtime-fix commit.
+
+## Entry 6 / 2026-09-22 / secret-file remediation
+- Symptom: `config/app.env` remained a tracked file, so `.gitignore` could not protect it; application startup also logged complete dependency URLs.
+- Root cause: Ignore rules affect untracked paths only. The existing tracked environment file and Compose password literal created avoidable repository/log exposure.
+- Fix: Moved local connection settings to the ignored root `.env`, added a placeholder-only `.env.example`, ignored and removed `config/app.env`, parameterized Compose database initialization, and redacted startup logging.
+- Retest evidence: Compose recreation with the migrated environment served all endpoints and both identities. It exposed a validation startup race: apps were `starting` during a one-time health sample even though `/ready` succeeded 9.2 seconds later. Validation now waits up to 30 seconds for all health checks before endpoint tests; final retest pending.
+- Related commit: pending.

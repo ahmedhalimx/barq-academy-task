@@ -40,21 +40,6 @@ jobs:
             DATABASE_URL: postgresql://barq_app:test_password@postgres:5432/barq_tasks
             REDIS_URL: ${{ secrets.REDIS_URL }} 
 
-
-      - name: Wait for Service Readiness (/ready)
-        run: |
-          echo "Waiting for http://localhost:8080/ready..."
-          for i in {1..30}; do
-            if curl -s -f http://localhost:8080/ready > /dev/null; then
-              echo "Service is ready!"
-              exit 0
-            fi
-            echo "Waiting for services to become ready ($i/30)..."
-            sleep 2
-          done
-          echo "Service readiness poll timed out!" >&2
-          exit 1
-
       - name: Run Validation Suite
         run: python validate.py
 

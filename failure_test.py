@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from dotenv import load_dotenv
 import json
 import os
 import subprocess
@@ -7,7 +8,8 @@ import time
 import urllib.error
 import urllib.request
 
-PUBLIC_PORT = os.getenv("PUBLIC_PORT", "8080")
+load_dotenv()
+PUBLIC_PORT = os.getenv("PUBLIC_PORT", "8090")
 BASE_URL = f"http://127.0.0.1:{PUBLIC_PORT}"
 TARGET_CONTAINER = "app-02"
 PROJECT_NAME = "barq-assessment"

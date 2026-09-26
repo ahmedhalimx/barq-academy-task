@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Environment validation: bounded checks with PASS/FAIL and non-zero failure exit."""
+from dotenv import load_dotenv
 import json
 import os
 import socket
@@ -10,11 +11,12 @@ import urllib.error
 import urllib.request
 import uuid
 
+load_dotenv()
 PUBLIC_PORT = os.getenv("PUBLIC_PORT", "8080")
 BASE_URL = f"http://127.0.0.1:{PUBLIC_PORT}"
 
 FAILED_CHECKS = []
-REQUIRED_CONTAINERS = ("app-01", "app-02", "nginx", "postgres", "redis")
+REQUIRED_CONTAINERS = ("app-01", "app-02", "app-03", "nginx", "postgres", "redis")
 
 
 def log_result(check_name: str, passed: bool, detail: str = "") -> bool:

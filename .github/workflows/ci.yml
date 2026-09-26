@@ -37,8 +37,8 @@ jobs:
       - name: Start Services
         run: docker compose -p barq-assessment up -d
         env:
-                DATABASE_URL: postgresql://barq_app:test_password@postgres:5432/barq_tasks
-    REDIS_URL: ${{ secrets.REDIS_URL }} 
+            DATABASE_URL: postgresql://barq_app:test_password@postgres:5432/barq_tasks
+            REDIS_URL: ${{ secrets.REDIS_URL }} 
 
 
       - name: Wait for Service Readiness (/ready)
